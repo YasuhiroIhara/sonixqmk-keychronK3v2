@@ -50,7 +50,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     *****************************************************************************************************************
     * LSFT         * Z    * X    * C    * V    * B    * N    * M    * ,    * .    * /   * \          * UP    * END  *
     *****************************************************************************************************************
-    * LCTL  * LGUI  * LALT  * EISU               * SPC               * KANA * RALT * FN * RSFT * LEFT * DOWN * RGHT *
+    * LCTL  * LGUI  * LALT  * Muhenkan            * SPC            * Henkan * RALT * FN * RSFT * LEFT * DOWN * RGHT *
     *****************************************************************************************************************
   */
   [WIN_BASE] = LAYOUT_86_jis(
@@ -92,8 +92,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
       KC_GRV,     KC_1,       KC_2,       KC_3,       KC_4,       KC_5,       KC_6,       KC_7,       KC_8,       KC_9,       KC_0,       KC_MINS,    KC_EQL,     KC_BSPC,                KC_PGUP,
       KC_TAB,     KC_Q,       KC_W,       KC_E,       KC_R,       KC_T,       KC_Y,       KC_U,       KC_I,       KC_O,       KC_P,       KC_LBRC,    KC_RBRC,                            KC_PGDN,
       KC_CAPS,    KC_A,       KC_S,       KC_D,       KC_F,       KC_G,       KC_H,       KC_J,       KC_K,       KC_L,       KC_SCLN,    KC_QUOT,    KC_NUHS,    KC_ENT,                 KC_HOME,
-      KC_LSFT,                KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       KC_N,       KC_M,       KC_COMM,    KC_DOT,     KC_SLSH,    KC_INT1,    KC_RSFT,                KC_END,
-      KC_LCTL,    KC_LALT,    KC_LGUI,    KC_LNG2,                            KC_SPC,     KC_INT3,                KC_LNG1,    KC_RGUI,    MO(MAC_FN), KC_LEFT,    KC_UP,      KC_DOWN,    KC_RGHT
+      KC_LSFT,                KC_Z,       KC_X,       KC_C,       KC_V,       KC_B,       KC_N,       KC_M,       KC_COMM,    KC_DOT,     KC_SLSH,    KC_INT1,    KC_RSFT,    KC_LEFT,    KC_END,
+      KC_LCTL,    KC_LALT,    KC_LGUI,    KC_LNG2,                            KC_SPC,     KC_INT3,                KC_LNG1,    KC_RGUI,    MO(MAC_FN),             KC_UP,      KC_DOWN,    KC_RGHT
   ),
   [MAC_FN] = LAYOUT_86_jis(
   /*  0           1           2           3           4           5           6           7           8           9           10          11          12          13          14          15       */
@@ -105,34 +105,3 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
       _______,    _______,    _______,    _______,                            _______,    _______,                _______,    _______,    _______,                _______,    RGB_SAD,    RGB_HUI
   )
 };
-
-bool dip_switch_update_user(uint8_t index, bool active) {
-  switch(index) {
-    case 0: // OS switch
-      if (active) { // Mac/iOS mode
-        layer_move(MAC_BASE);
-      }
-      else { // Windows/Android mode
-        layer_move(WIN_BASE);
-      }
-      break;
-    case 1: // Connection switch
-      // Probably it's not possible to do anything sensible here as switching from Cable to BT requires turning off the board. (BT / OFF / Cable)
-      if (active) { // BT mode
-        // do stuff
-      }
-      else { //Cable mode
-        // do stuff
-      }
-      break;
-  }
-  return true;
-}
-
-void keyboard_post_init_user(void) {
-  // Customise these values to desired behaviour
-  // debug_enable = true;
-  // debug_matrix = true;
-  // debug_keyboard = true;
-  // debug_mouse = true;
-}
