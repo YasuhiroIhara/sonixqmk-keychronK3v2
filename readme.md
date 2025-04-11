@@ -25,6 +25,8 @@ You can request changes by making a fork and opening a [pull request](https://gi
 * [Cluepad](/keyboards/clueboard/17/)
 * [Atreus](/keyboards/atreus/)
 
+[★ Keychron K3 version2 RGB JIS モデルの情報はこちら](/keyboards/keychron/k3)
+
 The project also includes community support for [lots of other keyboards](/keyboards/).
 
 ## Maintainers
