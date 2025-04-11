@@ -14,6 +14,9 @@ Brought to you by: [SonixQMK](https://github.com/SonixQMK/qmk_firmware)
 - 本firmware には bluetooth 機能が実装されていないため、flash すると無線でのキーボード利用はできなくなります。
 - 日本語配列ですべてのキーを正しく処理し、すべての LED も制御できます。LED animation は製品版とは異なりますが、製品版より多くの種類が含まれています。
 - bins/keychron_k3_rgb_jis_via.bin を flash すると、VIA と REMAP でブラウザ操作でキーリマップができます。定義ファイルは、keymaps/via/info.json を使用してください。VIA、REMAPの使い方については、https://note.com/regal_orca1471/n/n7b3b47cf9e10 を参照してください。
+- keychron_k3_rgb_jis_jis.bin は VIA 対応していない版です。flash 直後の起動が速いですが、通常使用では違いがなく、特に使う理由はありません。
+- keychron_k3_rgb_jis_via_no_wakeup.bin は、PC がスリープしている時にキーボードを押しても PC を起こさないように設定している版です。元ソースの開発者環境では、この firmware を使わないとキーボードの初回電源 ON 時に PC とつながらないとのことです。私の環境ではこの現象は起きていません。副作用は、PC スリープからの復帰がキーボードからはできなくなり、スリープ復帰後に一度キーボードの電源を入れなおす必要があることです。
+### 
 - オリジナルの firmware は 2025年4月に探したところでは公開されていないため、一度 flash すると元には戻せません。以下の firmware でもキーボードは動作しますが、機能制限があります。
  - k3 RGB ansi : ansi版の firmware を jis キーボードに flash すると、bluetooth が使え、キーボードとしては利用できますが、jis 専用キーは使えなくなります。
  - k2 RGB jis : K2 の jis版も動作します。キー入力、bluetooth、LEDが問題なく動作します。\キーが効かず、Backspaceキーが\キーになり、カーソルキーの一部動作がおかしいです。

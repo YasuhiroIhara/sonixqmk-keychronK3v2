@@ -24,4 +24,4 @@
 /* RGB LED Config */
 #define DRIVER_LED_TOTAL (87)
 
-#define NO_USB_STARTUP_CHECK = yes
+//#define NO_USB_STARTUP_CHECK = yes
