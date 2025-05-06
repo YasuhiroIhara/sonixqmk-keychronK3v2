@@ -23,6 +23,8 @@ RGB_MATRIX_DRIVER = SN32F24xB
 
 # project specific files
 SRC = ../../../drivers/led/sn32/matrix_sn32f24xx.c
+SRC += rgb_raindrop.c
+SRC += rgb_led_canvas.c
 
 # Build jis by default
 DEFAULT_FOLDER = keychron/k3/rgb/jis

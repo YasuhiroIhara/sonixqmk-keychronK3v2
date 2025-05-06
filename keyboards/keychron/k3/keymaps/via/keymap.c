@@ -128,3 +128,31 @@ bool dip_switch_update_user(uint8_t index, bool active) {
   }
   return true;
 }
+
+/*void keyboard_post_init_user(void) {
+  // HSV値の初期化（不透明度やHSVの初期値を設定）
+  rgb_matrix_sethsv(0, 0, 0);
+  // カスタムエフェクトをデフォルトに設定
+  rgb_matrix_mode(RGB_MATRIX_CUSTOM_led_canvas);
+}
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  switch (keycode) {
+    case KC_F21:
+      if (record->event.pressed) {
+        return false;
+      } else {
+        rgb_matrix_mode(RGB_MATRIX_CUSTOM_my_raindrop);
+        return false;
+      }
+      
+    case KC_F22:
+      if (record->event.pressed) {
+        return false;
+      } else {
+        rgb_matrix_mode(RGB_MATRIX_CUSTOM_led_canvas);
+        return false;
+      }
+  }
+  return true;
+}*/
