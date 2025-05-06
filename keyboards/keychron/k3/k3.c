@@ -18,3 +18,25 @@
  */
 
 #include "k3.h"
+
+#include "quantum.h"
+#include "rgb_custom_effects.h"
+
+#if defined(RGB_MATRIX_FRAMEBUFFER_EFFECTS) && defined(ENABLE_RGB_MATRIX_TYPING_HEATMAP)
+
+void matrix_scan_kb(void) {
+    // Scan the matrix as usual
+    matrix_scan_user();
+}
+
+bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
+    // Call the process_my_typewriter_effect function ★ CANVAS 機能を作るために押したキーの位置を伝える
+    if (record->event.pressed) {
+        process_my_typewriter_effect(record->event.key.row, record->event.key.col);
+    }
+    
+    // Don't forget to call the user's process_record function
+    return process_record_user(keycode, record);
+}
+
+#endif

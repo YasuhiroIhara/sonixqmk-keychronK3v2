@@ -2,12 +2,21 @@
 #include "rgb_matrix.h" // QMKのeffect_params_tを使うため
 #include "matrix.h"
 
-bool matrix_is_on(uint8_t row, uint8_t col) {
-    return (matrix_get_row(row) & (1 << col)) != 0;
-}
 
 // 各キーの押下回数を保存するための配列を定義
 uint8_t key_count[MATRIX_ROWS][MATRIX_COLS] = {{0}};
+
+int keyhit = 0;
+
+void process_my_canvas_effect(uint8_t row, uint8_t col) {
+    // Only light up the pressed key, no spreading to adjacent keys
+    key_count[row][col]++;
+    keyhit = 1;
+    // 10回を超えたら一度リセット
+    if (key_count[row][col] > 10) {
+        key_count[row][col] = 0;
+    }
+}
 
 int find_led_index(uint8_t row, uint8_t col) {
     for (int i = 0; i < DRIVER_LED_TOTAL; i++) {
@@ -21,16 +30,14 @@ int find_led_index(uint8_t row, uint8_t col) {
 
 // カスタム効果実装
 bool led_canvas(effect_params_t* params) {
+    RGB_MATRIX_USE_LIMITS(led_min, led_max);
     // 初期化時は何もしない
     if (params->init) {
+        // 全てのLEDを消灯
+        for (uint8_t i = led_min; i < led_max; i++) {
+            rgb_matrix_set_color(i, 0, 0, 0);
+        }
         return false;
-    }
-    
-    RGB_MATRIX_USE_LIMITS(led_min, led_max);
-    
-    // 全てのLEDを消灯
-    for (uint8_t i = led_min; i < led_max; i++) {
-        rgb_matrix_set_color(i, 0, 0, 0);
     }
     
     // キーが押された時のみ処理
@@ -40,14 +47,9 @@ bool led_canvas(effect_params_t* params) {
         uint8_t col = g_led_config.matrix_co[i][1];
 
         // 押されていればカウント増加
-        if (matrix_is_on(row, col)) {
-            key_count[row][col]++;
-            
-            // 10回を超えたら一度リセット
-            if (key_count[row][col] > 10) {
-                key_count[row][col] = 1;
-            }
-                    
+        if (keyhit) {
+            keyhit = 0; // リセット
+ 
             // 押下回数に応じてHSV値を決定
             HSV hsv;
             
