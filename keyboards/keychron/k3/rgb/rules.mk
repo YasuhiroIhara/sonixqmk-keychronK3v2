@@ -26,6 +26,7 @@ SRC = ../../../drivers/led/sn32/matrix_sn32f24xx.c
 SRC += rgb_raindrop.c
 SRC += rgb_led_canvas.c
 SRC += rgb_types.c
+SRC += rgb_bluewave.c
 
 # Build jis by default
 DEFAULT_FOLDER = keychron/k3/rgb/jis

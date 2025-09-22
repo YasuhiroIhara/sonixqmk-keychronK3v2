@@ -30,9 +30,16 @@ void matrix_scan_kb(void) {
 }
 
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
-    // Call the process_my_typewriter_effect function ★ CANVAS 機能を作るために押したキーの位置を伝える
-    if (record->event.pressed) {
+        if (record->event.pressed) {
+        // Pass key press position to animations that need it
         process_my_typewriter_effect(record->event.key.row, record->event.key.col);
+        process_rgb_led_canvas(record->event.key.row, record->event.key.col);
+        process_bluewave_effect(record->event.key.row, record->event.key.col);
+
+        // Check for Right Shift to cycle bluewave background
+        if (keycode == KC_RSFT) {
+            cycle_bluewave_background();
+        }
     }
     
     // Don't forget to call the user's process_record function
