@@ -2,13 +2,14 @@
 #define qsub8(a, b) ((a) > (b) ? (a) - (b) : 0)
 #endif
 
-#include "quantum.h"               // QMKの基本関数と型定義
-#include "rgb_matrix_types.h"     // effect_params_t など
-#include "color.h"
-#include "rgb_matrix.h"           // rgb_matrix_hsv_to_rgb を含む
+#include "rgb_custom_effects.h"
+//#include "quantum.h"               // QMKの基本関数と型定義
+//#include "rgb_matrix_types.h"     // effect_params_t など
+//#include "color.h"
+//#include "rgb_matrix.h"           // rgb_matrix_hsv_to_rgb を含む
 #include "progmem.h"              // qsub8 を含む
 
-#include "rgb_custom_effects.h"
+
 
 // 色・彩度・明度を保持する構造体
 typedef struct {
