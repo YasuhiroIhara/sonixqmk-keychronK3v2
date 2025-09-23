@@ -1,149 +1,71 @@
 #include "rgb_custom_effects.h"
-#include "rgb_matrix.h" // QMKのeffect_params_tを使うため
 #include "matrix.h"
+#include <stdlib.h> // For rand()
+#include "timer.h"  // For wait_ms()
+#include "config.h"
 
+// 各キーの押下回数を保存するための配列
+static uint8_t key_count[MATRIX_ROWS][MATRIX_COLS] = {0};
 
-// 各キーの押下回数を保存するための配列を定義
-uint8_t key_count[MATRIX_ROWS][MATRIX_COLS] = {{0}};
-
-int keyhit = 0;
-
-void process_my_canvas_effect(uint8_t row, uint8_t col) {
-    // Only light up the pressed key, no spreading to adjacent keys
+// k3.cから呼び出され、キーの押下回数をカウントする
+void process_rgb_led_canvas(uint8_t row, uint8_t col) {
     key_count[row][col]++;
-    keyhit = 1;
-    // 10回を超えたら一度リセット
+    // 10回を超えたらリセット
     if (key_count[row][col] > 10) {
         key_count[row][col] = 0;
     }
 }
 
-int find_led_index(uint8_t row, uint8_t col) {
-    for (int i = 0; i < DRIVER_LED_TOTAL; i++) {
-        if (g_led_config.matrix_co[i][0] == row &&
-            g_led_config.matrix_co[i][1] == col) {
-            return i;
-        }
+// 押下回数に応じたHSVカラーを取得するヘルパー関数
+static HSV get_hsv_from_count(uint8_t count) {
+    HSV hsv;
+    switch (count) {
+        case 1:  hsv = (HSV){170, 255, 50};  break; // 暗い青
+        case 2:  hsv = (HSV){170, 255, 150}; break; // 青
+        case 3:  hsv = (HSV){130, 255, 150}; break; // 水色
+        case 4:  hsv = (HSV){105, 255, 150}; break; // 青緑
+        case 5:  hsv = (HSV){85,  255, 150}; break; // 緑
+        case 6:  hsv = (HSV){42,  255, 150}; break; // 黄色
+        case 7:  hsv = (HSV){21,  255, 150}; break; // オレンジ
+        case 8:  hsv = (HSV){0,   255, 150}; break; // 赤
+        case 9:  hsv = (HSV){210, 255, 150}; break; // 紫
+        case 10: hsv = (HSV){0,   0,   150}; break; // 白
+        default: hsv = (HSV){0,   0,   0};   break; // 消灯
     }
-    return -1;  // 見つからなかった
+    return hsv;
 }
 
-// カスタム効果実装
+// カスタム効果の実装
 bool led_canvas(effect_params_t* params) {
-    RGB_MATRIX_USE_LIMITS(led_min, led_max);
-    // 初期化時は何もしない
-    if (params->init) {
-        // 全てのLEDを消灯
-        for (uint8_t i = led_min; i < led_max; i++) {
-            rgb_matrix_set_color(i, 0, 0, 0);
-        }
-        return false;
-    }
-    
-    // キーが押された時のみ処理
-    for (uint8_t i = led_min; i < led_max; i++) {
-        // キーの行・列を取得
-        uint8_t row = g_led_config.matrix_co[i][0];
-        uint8_t col = g_led_config.matrix_co[i][1];
+    //RGB_MATRIX_USE_LIMITS(led_min, led_max);
+    uint8_t led_min = RGB_MATRIX_LED_PROCESS_LIMIT * params->iter;
+    uint8_t led_max = led_min + RGB_MATRIX_LED_PROCESS_LIMIT;
+    if (led_max > sizeof(g_rgb_frame_buffer)) led_max = sizeof(g_rgb_frame_buffer);
 
-        // 押されていればカウント増加
-        if (keyhit) {
-            keyhit = 0; // リセット
- 
-            // 押下回数に応じてHSV値を決定
-            HSV hsv;
-            
-            switch (key_count[row][col]) {
-                case 1:  // 暗い青
-                    hsv = (HSV){ .h = 170, .s = 255, .v = 50 };
-                    break;
-                case 2:  // 青
-                    hsv = (HSV){ .h = 170, .s = 255, .v = 150 };
-                    break;
-                case 3:  // 水色
-                    hsv = (HSV){ .h = 130, .s = 255, .v = 150 };
-                    break;
-                case 4:  // 青緑
-                    hsv = (HSV){ .h = 105, .s = 255, .v = 150 };
-                    break;
-                case 5:  // 緑
-                    hsv = (HSV){ .h = 85, .s = 255, .v = 150 };
-                    break;
-                case 6:  // 黄色
-                    hsv = (HSV){ .h = 42, .s = 255, .v = 150 };
-                    break;
-                case 7:  // オレンジ
-                    hsv = (HSV){ .h = 21, .s = 255, .v = 150 };
-                    break;
-                case 8:  // 赤
-                    hsv = (HSV){ .h = 0, .s = 255, .v = 150 };
-                    break;
-                case 9:  // 紫
-                    hsv = (HSV){ .h = 210, .s = 255, .v = 150 };
-                    break;
-                case 10: // 白
-                    hsv = (HSV){ .h = 0, .s = 0, .v = 150 };
-                    break;
-                default:
-                    hsv = (HSV){ .h = 0, .s = 0, .v = 0 };
-                    break;
-            }
-            
-            // HSVからRGBに変換して色をセット
-            RGB rgb = hsv_to_rgb(hsv);
-            rgb_matrix_set_color(i, rgb.r, rgb.g, rgb.b);
-        }
-    }
-    
-    // 既に点灯しているLEDも含めて全部のキーをスキャン
+
+    // 全てのキーをスキャンし、押下回数に基づいて色を決定する
     for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
         for (uint8_t col = 0; col < MATRIX_COLS; col++) {
-            if (key_count[row][col] > 0) {
-                int led_index = find_led_index(row, col);
-                if (led_index >= 0) {
-                    // 押下回数に応じて色を表示
-                    HSV hsv;
-                    switch (key_count[row][col]) {
-                        case 1:  // 暗い青
-                            hsv = (HSV){ .h = 170, .s = 255, .v = 50 };
-                            break;
-                        case 2:  // 青
-                            hsv = (HSV){ .h = 170, .s = 255, .v = 150 };
-                            break;
-                        case 3:  // 水色
-                            hsv = (HSV){ .h = 130, .s = 255, .v = 150 };
-                            break;
-                        case 4:  // 青緑
-                            hsv = (HSV){ .h = 105, .s = 255, .v = 150 };
-                            break;
-                        case 5:  // 緑
-                            hsv = (HSV){ .h = 85, .s = 255, .v = 150 };
-                            break;
-                        case 6:  // 黄色
-                            hsv = (HSV){ .h = 42, .s = 255, .v = 150 };
-                            break;
-                        case 7:  // オレンジ
-                            hsv = (HSV){ .h = 21, .s = 255, .v = 150 };
-                            break;
-                        case 8:  // 赤
-                            hsv = (HSV){ .h = 0, .s = 255, .v = 150 };
-                            break;
-                        case 9:  // 紫
-                            hsv = (HSV){ .h = 210, .s = 255, .v = 150 };
-                            break;
-                        case 10: // 白
-                            hsv = (HSV){ .h = 0, .s = 0, .v = 150 };
-                            break;
-                        default:
-                            hsv = (HSV){ .h = 0, .s = 0, .v = 0 };
-                            break;
-                    }
-                    RGB rgb = hsv_to_rgb(hsv);
-                    rgb_matrix_set_color(led_index, rgb.r, rgb.g, rgb.b);
-                }
+            //int led_index = find_led_index(row, col);
+            //if (led_index != -1 && led_index >= 0 && led_index < MATRIX_ROWS * MATRIX_COLS) {
+            uint8_t led_index = row * MATRIX_COLS + col;
+            uint8_t count = key_count[row][col];
+                
+            if (count > 0) {
+                HSV hsv = get_hsv_from_count(count);
+
+                // 色相にランダムな値を加える (-10 から +10)
+                int random_hue_offset = (rand() % 21) - 10;
+                hsv.h += random_hue_offset;
+
+                RGB rgb = hsv_to_rgb(hsv);
+                rgb_matrix_set_color(led_index, rgb.r, rgb.g, rgb.b);
+            } else {
+                // カウントが0の場合は消灯
+                rgb_matrix_set_color(led_index, 0, 0, 0);
             }
         }
     }
-    
+
     return rgb_matrix_check_finished_leds(led_max);
 }

@@ -12,5 +12,11 @@ void process_my_typewriter_effect(uint8_t row, uint8_t col);
 bool my_typewriter(effect_params_t* params);
 bool my_raindrop(effect_params_t* params);
 bool led_canvas(effect_params_t* params);
+void process_rgb_led_canvas(uint8_t row, uint8_t col);
+
+// bluewave
+bool bluewave(effect_params_t* params);
+void process_bluewave_effect(uint8_t row, uint8_t col);
+void cycle_bluewave_background(void);
 
 #endif

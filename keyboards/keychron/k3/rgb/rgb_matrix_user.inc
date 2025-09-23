@@ -4,8 +4,10 @@
 // Declare custom effects using the RGB_MATRIX_EFFECT macro
 // (note the lack of semicolon after the macro!)
 RGB_MATRIX_EFFECT(my_raindrop)
+RGB_MATRIX_EFFECT(bluewave)
 RGB_MATRIX_EFFECT(led_canvas)
 RGB_MATRIX_EFFECT(my_typewriter)
+
 
 
 // Step 2.
