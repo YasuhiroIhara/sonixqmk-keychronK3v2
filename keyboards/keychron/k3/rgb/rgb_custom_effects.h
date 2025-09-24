@@ -19,4 +19,10 @@ bool bluewave(effect_params_t* params);
 void process_bluewave_effect(uint8_t row, uint8_t col);
 void cycle_bluewave_background(void);
 
+// splash_wave
+bool SPLASH_WAVE(effect_params_t* params);
+void process_splash_wave(uint8_t row, uint8_t col);
+void splash_wave_increase_bg(void);
+
+
 #endif

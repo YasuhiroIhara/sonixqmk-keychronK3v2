@@ -22,27 +22,36 @@
 #include "quantum.h"
 #include "rgb_custom_effects.h"
 
-#if defined(RGB_MATRIX_FRAMEBUFFER_EFFECTS) && defined(ENABLE_RGB_MATRIX_TYPING_HEATMAP)
-
-void matrix_scan_kb(void) {
-    // Scan the matrix as usual
-    matrix_scan_user();
-}
+#if defined(RGB_MATRIX_CUSTOM_USER)
 
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
-        if (record->event.pressed) {
-        // Pass key press position to animations that need it
-        process_my_typewriter_effect(record->event.key.row, record->event.key.col);
-        process_rgb_led_canvas(record->event.key.row, record->event.key.col);
-        process_bluewave_effect(record->event.key.row, record->event.key.col);
-
-        // Check for Right Shift to cycle bluewave background
-        if (keycode == KC_RSFT) {
-            cycle_bluewave_background();
+    if (record->event.pressed) {
+        // Check current animation mode and call the appropriate handler
+        switch (rgb_matrix_get_mode()) {
+            case RGB_MATRIX_CUSTOM_my_typewriter:
+                process_my_typewriter_effect(record->event.key.row, record->event.key.col);
+                break;
+            case RGB_MATRIX_CUSTOM_led_canvas:
+                process_rgb_led_canvas(record->event.key.row, record->event.key.col);
+                break;
+            case RGB_MATRIX_CUSTOM_bluewave:
+                if (keycode == KC_RSFT) {
+                    cycle_bluewave_background();
+                } else {
+                    process_bluewave_effect(record->event.key.row, record->event.key.col);
+                }
+                break;
+            case RGB_MATRIX_CUSTOM_splash_wave:
+                if (keycode == KC_RSFT) {
+                    splash_wave_increase_bg();
+                } else {
+                    process_splash_wave(record->event.key.row, record->event.key.col);
+                }
+                break;
+            default:
+                break;
         }
     }
-    
-    // Don't forget to call the user's process_record function
     return process_record_user(keycode, record);
 }
 
