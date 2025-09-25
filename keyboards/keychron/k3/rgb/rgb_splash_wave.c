@@ -2,113 +2,84 @@
 #include "rgb_matrix.h"
 #include <math.h>
 
-#define MAX_SPLASHES 8
-#define WAVE_WIDTH 30
+// This file implements a custom RGB Matrix effect.
+// It is not a standard reactive effect runner to allow for a custom background.
 
-// 状態管理用の構造体
-typedef struct {
-    bool     enabled;
-    uint8_t  key_index;
-    uint16_t start_tick;
-    uint8_t  center_x;
-    uint8_t  center_y;
-} splash_wave_t;
+#define WAVE_WIDTH 25 // Width of the wave ripple
+#define BG_STEPS 20   // Number of background brightness steps
 
-static splash_wave_t splashes[MAX_SPLASHES];
 static uint8_t bg_brightness_step = 0; // 0-20
 
-// Find the key index for a given row and col
-static uint8_t get_key_index(uint8_t row, uint8_t col) {
-    // This mapping depends on the specific keyboard wiring.
-    // The default implementation of `g_led_config.matrix_coors` might not be populated.
-    // A direct mapping or a more robust search might be needed if this fails.
-    for (uint8_t i = 0; i < DRIVER_LED_TOTAL; i++) {
-        if (g_led_config.matrix_coors[i][0] == col && g_led_config.matrix_coors[i][1] == row) {
-            return i;
-        }
-    }
-    // Fallback for keyboards without matrix_coors mapping
-    if (row < MATRIX_ROWS && col < MATRIX_COLS) {
-        return g_led_config.matrix_map[row][col];
-    }
-    return 0xFF; // Not found
-}
-
-// Key press handler
-void process_splash_wave(uint8_t row, uint8_t col) {
-    uint8_t key_index = get_key_index(row, col);
-    if (key_index >= DRIVER_LED_TOTAL) return;
-
-    for (int i = 0; i < MAX_SPLASHES; i++) {
-        if (!splashes[i].enabled) {
-            splashes[i].enabled    = true;
-            splashes[i].key_index  = key_index;
-            splashes[i].start_tick = timer_read();
-            splashes[i].center_x   = g_led_config.point[key_index].x;
-            splashes[i].center_y   = g_led_config.point[key_index].y;
-            return;
-        }
-    }
-}
-
-// Background brightness handler
+// Function to be called by a keymap to cycle background brightness
 void splash_wave_increase_bg(void) {
-    bg_brightness_step = (bg_brightness_step + 1) % 21;
+    bg_brightness_step = (bg_brightness_step + 1) % (BG_STEPS + 1);
 }
 
+// The main animation function
 bool SPLASH_WAVE(effect_params_t* params) {
     RGB_MATRIX_USE_LIMITS(led_min, led_max);
 
-    // 1. Set background
-    uint8_t bg_val = (bg_brightness_step * 255) / 20;
+    // 1. Set background color
+    uint8_t bg_val = (bg_brightness_step * 255) / BG_STEPS;
     for (uint8_t i = led_min; i < led_max; i++) {
+        RGB_MATRIX_TEST_LED_FLAGS();
         rgb_matrix_set_color(i, bg_val, bg_val, bg_val);
     }
 
-    // 2. Draw waves
-    uint32_t time_now = timer_read();
-    // Speed: 1(slow) to 8(fast). Default speed is 3 keys/sec.
-    // QMK speed is 0-255. Let's map it. Base speed + scaled value.
-    float speed = 1.5f + (rgb_matrix_config.speed / 32.0f); 
+    // 2. Draw wave from the last key press
+    // We use g_last_hit_tracker like the reference SPLASH effect, but manually
+    // render to support a background. We only use the most recent key press.
+    if (g_last_hit_tracker.count == 0) {
+        return rgb_matrix_check_finished_leds(led_max);
+    }
 
-    for (int s = 0; s < MAX_SPLASHES; s++) {
-        if (!splashes[s].enabled) continue;
+    // Get data for the last key press
+    uint8_t last_hit_index = g_last_hit_tracker.count - 1;
+    int16_t  center_x   = g_last_hit_tracker.x[last_hit_index];
+    int16_t  center_y   = g_last_hit_tracker.y[last_hit_index];
+    
+    // Scale tick by animation speed setting. The faster the setting, the faster the wave.
+    // qadd8(rgb_matrix_config.speed, 1) ensures speed is not zero.
+    // The division by 64 is a scaling factor to get a pleasant speed.
+    uint16_t tick = scale16by8(g_last_hit_tracker.tick[last_hit_index], qadd8(rgb_matrix_config.speed, 1)) / 64;
 
-        uint32_t elapsed = time_now - splashes[s].start_tick;
-        float wave_radius = elapsed * speed / 10.0f;
+    float wave_radius = tick;
 
-        if (wave_radius > 255) { // Wave dissipates
-            splashes[s].enabled = false;
-            continue;
-        }
+    // If wave is huge, it has dissipated.
+    // The tick will eventually wrap around, so this check is important.
+    if (wave_radius > 255) {
+        return rgb_matrix_check_finished_leds(led_max);
+    }
 
-        for (uint8_t i = led_min; i < led_max; i++) {
-            float dx = g_led_config.point[i].x - splashes[s].center_x;
-            float dy = g_led_config.point[i].y - splashes[s].center_y;
-            float dist = hypotf(dx, dy);
+    for (uint8_t i = led_min; i < led_max; i++) {
+        RGB_MATRIX_TEST_LED_FLAGS();
 
-            float dist_from_wave = fabsf(dist - wave_radius);
+        float dx = g_led_config.point[i].x - center_x;
+        float dy = g_led_config.point[i].y - center_y;
+        float dist = hypotf(dx, dy);
 
-            if (dist_from_wave < WAVE_WIDTH) {
-                float intensity = 1.0f - (dist_from_wave / WAVE_WIDTH);
+        float dist_from_wave = fabsf(dist - wave_radius);
 
-                // Randomize color for splash effect
-                uint8_t hue = HSV_BLUE + (rand() % 40 - 20);
-                uint8_t sat = 255 - (rand() % 50);
-                uint8_t val = intensity * 255;
+        if (dist_from_wave < WAVE_WIDTH) {
+            // LED is part of the wave
+            float intensity = 1.0f - (dist_from_wave / WAVE_WIDTH);
 
-                HSV hsv = {hue, sat, val};
-                RGB rgb = hsv_to_rgb(hsv);
-                
-                // Blend with background
-                uint8_t bg_val_current = (bg_brightness_step * 255) / 20;
-                rgb.r = MAX(rgb.r, bg_val_current);
-                rgb.g = MAX(rgb.g, bg_val_current);
-                rgb.b = MAX(rgb.b, bg_val_current);
+            // Randomize color for splash effect (blue/white)
+            uint8_t hue = HSV_BLUE + (rand() % 30 - 15); // +/- 15 from blue
+            uint8_t sat = 255 - (rand() % 80);          // 175-255, tending towards white
+            uint8_t val = intensity * 255;
 
-                rgb_matrix_set_color(i, rgb.r, rgb.g, rgb.b);
-            }
+            HSV hsv = {hue, sat, val};
+            RGB rgb = hsv_to_rgb(hsv);
+
+            // Blend with background using MAX to ensure wave is always brighter
+            rgb.r = MAX(rgb.r, bg_val);
+            rgb.g = MAX(rgb.g, bg_val);
+            rgb.b = MAX(rgb.b, bg_val);
+
+            rgb_matrix_set_color(i, rgb.r, rgb.g, rgb.b);
         }
     }
+
     return rgb_matrix_check_finished_leds(led_max);
 }
