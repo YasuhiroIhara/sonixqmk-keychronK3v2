@@ -1,5 +1,5 @@
-#include "quantum.h"
-#include "rgb_matrix.h"
+#include "rgb_custom_effects.h"
+#include "lib/lib8tion/lib8tion.h" // For qadd8, scale16by8
 #include <math.h>
 
 // This file implements a custom RGB Matrix effect.
@@ -7,6 +7,10 @@
 
 #define WAVE_WIDTH 25 // Width of the wave ripple
 #define BG_STEPS 20   // Number of background brightness steps
+
+#ifndef MAX
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#endif
 
 static uint8_t bg_brightness_step = 0; // 0-20
 
@@ -16,7 +20,7 @@ void splash_wave_increase_bg(void) {
 }
 
 // The main animation function
-bool SPLASH_WAVE(effect_params_t* params) {
+bool splash_wave(effect_params_t* params) {
     RGB_MATRIX_USE_LIMITS(led_min, led_max);
 
     // 1. Set background color
@@ -40,8 +44,8 @@ bool SPLASH_WAVE(effect_params_t* params) {
     
     // Scale tick by animation speed setting. The faster the setting, the faster the wave.
     // qadd8(rgb_matrix_config.speed, 1) ensures speed is not zero.
-    // The division by 64 is a scaling factor to get a pleasant speed.
-    uint16_t tick = scale16by8(g_last_hit_tracker.tick[last_hit_index], qadd8(rgb_matrix_config.speed, 1)) / 64;
+    // The division by 8 is a scaling factor to get a pleasant speed.
+    uint16_t tick = scale16by8(g_last_hit_tracker.tick[last_hit_index], qadd8(rgb_matrix_config.speed, 1)) / 8 + 10;
 
     float wave_radius = tick;
 
@@ -65,7 +69,7 @@ bool SPLASH_WAVE(effect_params_t* params) {
             float intensity = 1.0f - (dist_from_wave / WAVE_WIDTH);
 
             // Randomize color for splash effect (blue/white)
-            uint8_t hue = HSV_BLUE + (rand() % 30 - 15); // +/- 15 from blue
+            uint8_t hue = 170 + (rand() % 20 - 10); // +/- 10 from blue
             uint8_t sat = 255 - (rand() % 80);          // 175-255, tending towards white
             uint8_t val = intensity * 255;
 

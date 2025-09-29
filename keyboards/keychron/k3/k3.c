@@ -31,21 +31,13 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             case RGB_MATRIX_CUSTOM_my_typewriter:
                 process_my_typewriter_effect(record->event.key.row, record->event.key.col);
                 break;
-            case RGB_MATRIX_CUSTOM_led_canvas:
-                process_rgb_led_canvas(record->event.key.row, record->event.key.col);
-                break;
             case RGB_MATRIX_CUSTOM_bluewave:
                 if (keycode == KC_RSFT) {
                     cycle_bluewave_background();
-                } else {
-                    process_bluewave_effect(record->event.key.row, record->event.key.col);
                 }
-                break;
             case RGB_MATRIX_CUSTOM_splash_wave:
                 if (keycode == KC_RSFT) {
                     splash_wave_increase_bg();
-                } else {
-                    process_splash_wave(record->event.key.row, record->event.key.col);
                 }
                 break;
             default:

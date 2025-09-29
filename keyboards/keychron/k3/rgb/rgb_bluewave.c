@@ -4,13 +4,14 @@
 
 // --- Configuration ---
 #define MAX_WAVES 6         // Maximum number of concurrent waves
-#define WAVE_WIDTH 5.5f      // How wide the ripple is (increased for smoother wave)
-#define WAVE_DURATION 5000   // How long a wave lasts in ms (slightly reduced)
+#define WAVE_WIDTH 40.0f    // How wide the ripple is (物理座標単位) - 波の厚み
+#define WAVE_DURATION 8000  // How long a wave lasts in ms (8 seconds)
+#define WAVE_SPEED 5.0f     // Wave speed in keys per second
 
 // --- Data Structures ---
 typedef struct {
-    uint8_t row;         // Center row of the wave
-    uint8_t col;         // Center col of the wave
+    int16_t center_x;    // 物理座標のX（LEDの実際の位置）
+    int16_t center_y;    // 物理座標のY（LEDの実際の位置）
     uint16_t timestamp;  // Time the wave was created
     bool active;         // Whether this wave slot is in use
     uint8_t wave_id;     // Unique ID for consistent coloring
@@ -19,7 +20,6 @@ typedef struct {
 // --- Global State ---
 static wave_t waves[MAX_WAVES];
 static uint8_t background_level = 0; // 0-20, where 0 is black, 20 is white
-static uint8_t last_wave_index = 0;
 static uint8_t next_wave_id = 0;
 
 // --- Helper Functions ---
@@ -49,47 +49,46 @@ static RGB get_wave_color(uint8_t wave_id, float distance_ratio, float intensity
     return hsv_to_rgb(hsv);
 }
 
-// Calculate wave intensity based on distance from wave edge
-/*static float calculate_wave_intensity(float distance, float current_radius) {
-    float wave_edge_distance = fabsf(distance - current_radius);
-    float half_width = WAVE_WIDTH / 2.0f;
-    
-    if (wave_edge_distance > half_width) {
-        return 0.0f; // Outside wave
-    }
-    
-    // Smooth falloff from center of wave to edge
-    float intensity = 1.0f - (wave_edge_distance / half_width);
-    
-    // Apply smoothing function for more natural look
-    intensity = intensity * intensity * (3.0f - 2.0f * intensity); // smoothstep
-    
-    return intensity;
-}*/
-static float calculate_wave_intensity(float distance, float current_radius) {
-    // 波の最前線付近のみを光らせる
-    if (distance > current_radius + WAVE_WIDTH/2.0f || distance < current_radius - WAVE_WIDTH/2.0f) {
+// Calculate wave intensity based on distance from wave center
+static float calculate_wave_intensity(float distance, float current_radius, float elapsed_time) {
+    // 波がまだ到達していない場合は0
+    if (distance > current_radius + WAVE_WIDTH) {
         return 0.0f;
     }
     
-    float wave_edge_distance = fabsf(distance - current_radius);
-    float intensity = 1.0f - (wave_edge_distance / (WAVE_WIDTH / 2.0f));
-    return intensity * intensity * (3.0f - 2.0f * intensity);
+    // 時間による全体的な減衰（8秒で0になる）
+    float time_factor = 1.0f - (elapsed_time / WAVE_DURATION);
+    if (time_factor <= 0.0f) {
+        return 0.0f;
+    }
+    
+    // 距離による強度計算
+    float intensity = 0.0f;
+    
+    if (distance <= current_radius) {
+        // 波が通過した領域：中心からの距離に基づいて減衰
+        float distance_factor = 1.0f - (distance / (current_radius + WAVE_WIDTH));
+        distance_factor = fmaxf(0.0f, distance_factor);
+        intensity = distance_factor;
+    } else {
+        // 波の前線部分：波の幅内であれば光る
+        float front_distance = distance - current_radius;
+        if (front_distance <= WAVE_WIDTH) {
+            float front_factor = 1.0f - (front_distance / WAVE_WIDTH);
+            intensity = front_factor;
+        }
+    }
+    
+    // 全体の強度に時間減衰を適用
+    intensity *= time_factor;
+    
+    // スムーズな減衰カーブ
+    intensity = intensity * intensity * (3.0f - 2.0f * intensity);
+    
+    return intensity;
 }
 
 // --- Core Logic ---
-
-// Called from k3.c on every key press
-void process_bluewave_effect(uint8_t row, uint8_t col) {
-    last_wave_index = (last_wave_index + 1) % MAX_WAVES;
-    waves[last_wave_index] = (wave_t){
-        .row = row,
-        .col = col,
-        .timestamp = timer_read(),
-        .active = true,
-        .wave_id = next_wave_id++
-    };
-}
 
 // Called from k3.c when Right Shift is pressed
 void cycle_bluewave_background(void) {
@@ -107,16 +106,66 @@ bool bluewave(effect_params_t* params) {
         background_level = 0;
         next_wave_id = 0;
     }
+    
+    // キーが押されている場合、新しい波を作成
+    if (g_last_hit_tracker.count > 0) {
+        // Get data for the last key press by using g_last_hit_tracker
+        uint8_t last_hit_index = g_last_hit_tracker.count - 1;
+        int16_t center_x = g_last_hit_tracker.x[last_hit_index];
+        int16_t center_y = g_last_hit_tracker.y[last_hit_index];
 
-    // Map QMK animation speed (0-255) to our desired keys/sec range
-    float speed = map_value(rgb_matrix_config.speed, 0, 255, 3, 15); // Adjusted range
+        // 新しい波として追加（既存の波と同じ位置でも重複を許可）
+        bool should_create_wave = true;
+        
+        // 同じ位置に最近作られた波があるかチェック（重複防止）
+        for (int w = 0; w < MAX_WAVES; w++) {
+            if (waves[w].active && 
+                waves[w].center_x == center_x && 
+                waves[w].center_y == center_y &&
+                timer_elapsed(waves[w].timestamp) < 100) { // 100ms以内の重複は防ぐ
+                should_create_wave = false;
+                break;
+            }
+        }
+        
+        if (should_create_wave) {
+            // 空いているスロットを探す、なければ最古のものを上書き
+            int target_slot = -1;
+            uint16_t oldest_time = 0;
+            
+            for (int w = 0; w < MAX_WAVES; w++) {
+                if (!waves[w].active) {
+                    target_slot = w;
+                    break;
+                }
+                uint16_t elapsed = timer_elapsed(waves[w].timestamp);
+                if (elapsed > oldest_time) {
+                    oldest_time = elapsed;
+                    target_slot = w;
+                }
+            }
+            
+            waves[target_slot] = (wave_t){
+                .center_x = center_x,
+                .center_y = center_y,
+                .timestamp = timer_read(),
+                .active = true,
+                .wave_id = next_wave_id++
+            };
+        }
+    }
+
+    // Map QMK animation speed (0-255) to wave speed multiplier (0.5x to 2.0x)
+    float speed_multiplier = map_value(rgb_matrix_config.speed, 0, 255, 0.5f, 2.0f);
+    float actual_wave_speed = WAVE_SPEED * speed_multiplier * 25.0f; // より高速でキーボード端まで到達
 
     HSV background_hsv = {0, 0, map_value(background_level, 0, 20, 0, 255)};
     RGB background_rgb = hsv_to_rgb(background_hsv);
 
     for (uint8_t i = led_min; i < led_max; i++) {
-        uint8_t led_row = g_led_config.matrix_co[i][0];
-        uint8_t led_col = g_led_config.matrix_co[i][1];
+        // LEDの物理座標を取得
+        int16_t led_x = g_led_config.point[i].x;
+        int16_t led_y = g_led_config.point[i].y;
 
         // Start with background color
         RGB final_color = background_rgb;
@@ -128,26 +177,24 @@ bool bluewave(effect_params_t* params) {
             if (!waves[w].active) continue;
 
             uint16_t elapsed = timer_elapsed(waves[w].timestamp);
-            if (elapsed > WAVE_DURATION) {
+            if (elapsed >= WAVE_DURATION) {  // >= を使用して確実に8秒で消去
                 waves[w].active = false;
                 continue;
             }
 
-            // Calculate current wave radius
-            float current_radius = (elapsed / 1000.0f) * speed;
+            // Calculate current wave radius (時間経過に基づいて半径を拡大)
+            float current_radius = (elapsed / 1000.0f) * actual_wave_speed;
 
-            // Calculate distance from LED to wave center
-            float distance = sqrtf(powf(led_row - waves[w].row, 2) + powf(led_col - waves[w].col, 2));
+            // Calculate distance from LED to wave center (物理座標で計算)
+            float dx = led_x - waves[w].center_x;
+            float dy = led_y - waves[w].center_y;
+            float distance = sqrtf(dx * dx + dy * dy);
 
             // Calculate wave intensity
-            float intensity = calculate_wave_intensity(distance, current_radius);
+            float intensity = calculate_wave_intensity(distance, current_radius, (float)elapsed);
             
-            if (intensity > 0.0f) {
-                // Add time-based fade-out
-                float age_factor = 1.0f - ((float)elapsed / WAVE_DURATION);
-                intensity *= age_factor;
-                
-                RGB wave_color = get_wave_color(waves[w].wave_id, distance / current_radius, intensity);
+            if (intensity > 0.01f) { // 最小閾値を下げる
+                RGB wave_color = get_wave_color(waves[w].wave_id, distance / (current_radius + 1.0f), intensity);
                 
                 // Accumulate colors with proper blending
                 accumulated_color.r += (uint8_t)(wave_color.r * intensity);
