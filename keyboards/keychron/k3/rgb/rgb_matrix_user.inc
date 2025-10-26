@@ -8,6 +8,7 @@ RGB_MATRIX_EFFECT(bluewave)
 RGB_MATRIX_EFFECT(led_canvas)
 RGB_MATRIX_EFFECT(my_typewriter)
 RGB_MATRIX_EFFECT(splash_wave)
+RGB_MATRIX_EFFECT(fireworks)
 
 
 

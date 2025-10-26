@@ -24,5 +24,6 @@ bool splash_wave(effect_params_t* params);
 //void process_splash_wave(uint8_t row, uint8_t col);
 void splash_wave_increase_bg(void);
 
+bool fireworks(effect_params_t* params);
 
 #endif

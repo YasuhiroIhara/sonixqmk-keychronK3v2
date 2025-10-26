@@ -28,6 +28,7 @@ SRC += rgb_bluewave.c
 SRC += rgb_led_canvas.c
 SRC += rgb_types.c
 SRC += rgb_splash_wave.c
+SRC += rgb_fireworks.c
 
 
 # Build jis by default
