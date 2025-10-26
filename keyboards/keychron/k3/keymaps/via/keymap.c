@@ -81,7 +81,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  [WIN_FN] = LAYOUT_86_jis(
   /*  0           1           2           3           4           5           6           7           8           9           10          11          12          13          14          15       */
       RESET,      KC_BRID,    KC_BRIU,    KC_TASK,    KC_FLXP,    RGB_VAD,    RGB_VAI,    KC_MPRV,    KC_MPLY,    KC_MNXT,    KC_MUTE,    KC_VOLD,    KC_VOLU,    _______,    KC_INS,     RGB_TOG  ,
-      _______,    _______,    _______,    _______,    _______,    RGB_MOD,    RGB_RMOD,   _______,    _______,    _______,    _______,    _______,    _______,    _______,                KC_PGUP  ,
+      _______,    KC_F21,     KC_F22,     KC_F23,     KC_F24,     KC_F15,     KC_F16,     KC_F17,     KC_F18,     KC_F19,     KC_F20,     _______,    _______,    _______,                KC_PGUP  ,
       _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,                            KC_PGDN  ,
       _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,    _______,                RGB_SPI  ,
       _______,                _______,    _______,    _______,    _______,    _______,    NK_TOGG,    _______,    _______,    _______,    _______,    _______,    RGB_SAI,    RGB_HUD,    RGB_SPD  ,
@@ -105,3 +105,54 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
       _______,    _______,    _______,    _______,                            _______,    _______,                _______,    _______,    _______,                _______,    RGB_SAD,    RGB_HUI
   )
 };
+
+bool dip_switch_update_user(uint8_t index, bool active) {
+  switch(index) {
+    case 0: // OS switch
+      if (active) { // Mac/iOS mode
+        layer_move(MAC_BASE);
+      }
+      else { // Windows/Android mode
+        layer_move(WIN_BASE);
+      }
+      break;
+    case 1: // Connection switch
+      // Probably it's not possible to do anything sensible here as switching from Cable to BT requires turning off the board. (BT / OFF / Cable)
+      if (active) { // BT mode
+        // do stuff
+      }
+      else { //Cable mode
+        // do stuff
+      }
+      break;
+  }
+  return true;
+}
+
+/*void keyboard_post_init_user(void) {
+  // HSV値の初期化（不透明度やHSVの初期値を設定）
+  rgb_matrix_sethsv(0, 0, 0);
+  // カスタムエフェクトをデフォルトに設定
+  rgb_matrix_mode(RGB_MATRIX_CUSTOM_led_canvas);
+}
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  switch (keycode) {
+    case KC_F21:
+      if (record->event.pressed) {
+        return false;
+      } else {
+        rgb_matrix_mode(RGB_MATRIX_CUSTOM_my_raindrop);
+        return false;
+      }
+      
+    case KC_F22:
+      if (record->event.pressed) {
+        return false;
+      } else {
+        rgb_matrix_mode(RGB_MATRIX_CUSTOM_led_canvas);
+        return false;
+      }
+  }
+  return true;
+}*/

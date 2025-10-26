@@ -18,3 +18,33 @@
  */
 
 #include "k3.h"
+
+#include "quantum.h"
+#include "rgb_custom_effects.h"
+
+#if defined(RGB_MATRIX_CUSTOM_USER)
+
+bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
+    if (record->event.pressed) {
+        // Check current animation mode and call the appropriate handler
+        switch (rgb_matrix_get_mode()) {
+            case RGB_MATRIX_CUSTOM_my_typewriter:
+                process_my_typewriter_effect(record->event.key.row, record->event.key.col);
+                break;
+            case RGB_MATRIX_CUSTOM_bluewave:
+                if (keycode == KC_RSFT) {
+                    cycle_bluewave_background();
+                }
+            case RGB_MATRIX_CUSTOM_splash_wave:
+                if (keycode == KC_RSFT) {
+                    splash_wave_increase_bg();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    return process_record_user(keycode, record);
+}
+
+#endif
